@@ -39,7 +39,7 @@ Download the APK file from the Releases page and install it on your Android devi
 3. Fill in the following information:
    - **API Key**: Your Zhipu AI API Key
    - **Base URL**: Default is `https://open.bigmodel.cn/api/paas/v4`
-   - **Model Name**: Default is `autoglm-phone-9b`
+   - **Model Name**: Default is `autoglm-phone`
 4. Click "Save Settings"
 
 ### 3. Enable Accessibility Service

@@ -7,6 +7,7 @@ import android.os.Build
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.example.open_autoglm_android.service.AutoGLMAccessibilityService
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
@@ -579,9 +580,48 @@ class ActionExecutor(private val service: AutoGLMAccessibilityService) {
     }
     
     private suspend fun wait(actionObj: JsonObject): ExecuteResult {
-        val duration = actionObj.get("duration")?.asInt ?: 1000
-        delay(duration.toLong())
-        return ExecuteResult(success = true)
+        // 支持字符串格式（如 "2 seconds"）与数字（毫秒）
+        val durationMs = parseDurationMillis(actionObj.get("duration"))
+        delay(durationMs)
+        return ExecuteResult(success = true, message = "已等待 ${durationMs}ms")
+    }
+
+    private fun parseDurationMillis(durationElement: JsonElement?): Long {
+        if (durationElement == null) return 1000L
+
+        if (durationElement.isJsonPrimitive) {
+            val prim = durationElement.asJsonPrimitive
+
+            // 纯数字：按毫秒处理
+            if (prim.isNumber) {
+                return prim.asLong.coerceAtLeast(0L)
+            }
+
+            // 字符串：解析秒或毫秒
+            if (prim.isString) {
+                val raw = prim.asString.trim()
+                // 支持 "2 seconds" / "1.5 s" / "800 ms" / "1000"
+                val regex = Regex("""(?i)(\d+(?:\.\d+)?)\s*(ms|millisecond|milliseconds|s|sec|secs|second|seconds)?""")
+                val match = regex.find(raw)
+                if (match != null) {
+                    val value = match.groupValues[1].toDoubleOrNull() ?: 1.0
+                    val unit = match.groupValues.getOrNull(2)?.lowercase()
+                    val millis = when (unit) {
+                        "ms", "millisecond", "milliseconds" -> value
+                        // 默认按秒处理
+                        "s", "sec", "secs", "second", "seconds" -> value * 1000
+                        else -> {
+                            // 无单位则默认视为秒
+                            value * 1000
+                        }
+                    }
+                    return millis.toLong().coerceAtLeast(0L)
+                }
+            }
+        }
+
+        // 兜底 1 秒
+        return 1000L
     }
     
     private fun getPackageName(appName: String): String {

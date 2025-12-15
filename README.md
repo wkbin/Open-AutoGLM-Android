@@ -39,7 +39,7 @@
 3. 填写以下信息：
    - **API Key**：您的智谱 API Key
    - **Base URL**：默认为 `https://open.bigmodel.cn/api/paas/v4`
-   - **Model Name**：默认为 `autoglm-phone-9b`
+   - **Model Name**：默认为 `autoglm-phone`
 4. 点击"保存设置"
 
 ### 3. 启用无障碍服务

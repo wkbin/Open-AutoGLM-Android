@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val apiKey: String = "",
     val baseUrl: String = "https://open.bigmodel.cn/api/paas/v4",
-    val modelName: String = "autoglm-phone-9b",
+    val modelName: String = "autoglm-phone",
     val isAccessibilityEnabled: Boolean = false,
     val isLoading: Boolean = false,
     val saveSuccess: Boolean? = null,
@@ -45,7 +45,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
         viewModelScope.launch {
             preferencesRepository.modelName.collect { modelName ->
-                _uiState.value = _uiState.value.copy(modelName = modelName ?: "autoglm-phone-9b")
+                _uiState.value = _uiState.value.copy(modelName = modelName ?: "autoglm-phone")
             }
         }
     }
