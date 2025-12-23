@@ -16,8 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -39,7 +37,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.open_autoglm_android.data.Conversation
+import com.example.open_autoglm_android.data.database.Conversation
 import com.example.open_autoglm_android.ui.viewmodel.ChatViewModel
 import com.example.open_autoglm_android.ui.viewmodel.MessageRole
 import java.io.File
@@ -79,7 +77,9 @@ fun ChatScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().imePadding()) {
+    Column(modifier = modifier
+        .fillMaxSize()
+        .imePadding()) {
 
         // 错误提示
         uiState.error?.let { error ->
@@ -191,7 +191,9 @@ fun ChatScreen(
                 OutlinedTextField(
                     value = userInput,
                     onValueChange = { userInput = it },
-                    modifier = Modifier.weight(1f).imeNestedScroll() ,
+                    modifier = Modifier
+                        .weight(1f)
+                        .imeNestedScroll(),
                     placeholder = { Text("输入任务描述...") },
                     enabled = !uiState.isLoading,
                     maxLines = 3
@@ -243,8 +245,7 @@ fun ChatScreen(
     }
 
     // 全屏图片预览
-    previewImageIndex?.let {
-            initialIndex ->
+    previewImageIndex?.let { initialIndex ->
         ImagePreviewDialog(
             imageMessages = allImageMessages,
             initialIndex = initialIndex,
@@ -374,7 +375,7 @@ fun ImagePreviewDialog(
 fun ConversationDrawer(
     conversations: List<Conversation>,
     currentConversationId: String?,
-    onConversationClick: (String) -> Unit,
+    onConversationClick: (String, String) -> Unit,
     onNewConversation: () -> Unit,
     onDeleteConversation: (String) -> Unit
 ) {
@@ -417,7 +418,7 @@ fun ConversationDrawer(
                     ConversationItem(
                         conversation = conversation,
                         isSelected = conversation.id == currentConversationId,
-                        onClick = { onConversationClick(conversation.id) },
+                        onClick = { onConversationClick(conversation.id, conversation.title) },
                         onDelete = { onDeleteConversation(conversation.id) }
                     )
                 }

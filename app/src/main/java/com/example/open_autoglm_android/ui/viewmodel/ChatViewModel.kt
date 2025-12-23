@@ -7,8 +7,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.open_autoglm_android.data.ConversationRepository
 import com.example.open_autoglm_android.data.PreferencesRepository
-import com.example.open_autoglm_android.data.SavedChatMessage
-import com.example.open_autoglm_android.data.Conversation
+import com.example.open_autoglm_android.data.database.Conversation
+import com.example.open_autoglm_android.data.database.SavedChatMessage
 import com.example.open_autoglm_android.domain.ActionExecutor
 import com.example.open_autoglm_android.domain.AppRegistry
 import com.example.open_autoglm_android.domain.ExecuteResult
@@ -25,8 +25,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.yield
-import kotlinx.coroutines.isActive
 
 data class ChatMessage(
     val id: String,
@@ -51,6 +51,7 @@ data class ChatUiState(
     val taskCompletedMessage: String? = null,
     val conversations: List<Conversation> = emptyList(),
     val currentConversationId: String? = null,
+    val currentConversationTitle: String? = null,
     val isDrawerOpen: Boolean = false
 )
 
@@ -107,6 +108,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     loadConversationMessages(conversationId)
                 }
             }
+
+            launch {
+                conversationRepository.currentConversationTitle.collect { conversationTitle ->
+                    _uiState.value = _uiState.value.copy(currentConversationTitle = conversationTitle)
+                }
+            }
             
             // 监听当前应用变化 (UI 实时展示)
             launch {
@@ -116,7 +123,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             // 如果没有对话，创建一个默认对话
-            if (conversationRepository.conversations.value.isEmpty()) {
+            val initialConversations = conversationRepository.conversations.first()
+            if (initialConversations.isEmpty()) {
                 conversationRepository.createConversation()
             }
         }
@@ -137,20 +145,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         
-        val conversation = conversationRepository.getCurrentConversation()
-        if (conversation != null) {
-            val messages = conversation.messages.map { saved ->
-                ChatMessage(
-                    id = saved.id,
-                    role = if (saved.role == "USER") MessageRole.USER else MessageRole.ASSISTANT,
-                    content = saved.content,
-                    thinking = saved.thinking,
-                    action = saved.action,
-                    imagePath = saved.imagePath,
-                    timestamp = saved.timestamp
-                )
+        viewModelScope.launch {
+            val conversationWithMessages = conversationRepository.getCurrentConversation()
+            if (conversationWithMessages != null) {
+                val messages = conversationWithMessages.messages.map { saved ->
+                    ChatMessage(
+                        id = saved.id,
+                        role = if (saved.role == "USER") MessageRole.USER else MessageRole.ASSISTANT,
+                        content = saved.content,
+                        thinking = saved.thinking,
+                        action = saved.action,
+                        imagePath = saved.imagePath,
+                        timestamp = saved.timestamp
+                    )
+                }
+                _uiState.value = _uiState.value.copy(messages = messages)
             }
-            _uiState.value = _uiState.value.copy(messages = messages)
         }
     }
     
@@ -159,6 +169,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val savedMessages = _uiState.value.messages.map { msg ->
             SavedChatMessage(
                 id = msg.id,
+                conversationId = conversationId,
                 role = msg.role.name,
                 content = msg.content,
                 thinking = msg.thinking,
@@ -184,11 +195,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 切换对话
      */
-    fun switchConversation(conversationId: String) {
+    fun switchConversation(conversationId: String,conversationTitle:String) {
         conversationRepository.switchConversation(conversationId)
         messageContext.clear()
         stepTimings.clear()
-        _uiState.value = _uiState.value.copy(isDrawerOpen = false)
+        _uiState.value = _uiState.value.copy(isDrawerOpen = false, currentConversationTitle = conversationTitle)
     }
     
     /**
@@ -732,5 +743,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val apiKey = preferencesRepository.getApiKeySync() ?: "EMPTY"
             modelClient = ModelClient(baseUrl, apiKey)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // 清理资源
+        currentTaskJob?.cancel()
+        conversationRepository.cleanup()
     }
 }

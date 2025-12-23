@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainScreen(
     onNavigateToPromptLog: () -> Unit,
-    onNavigateToSettings:() -> Unit
+    onNavigateToSettings: () -> Unit
 ) {
     val viewModel: ChatViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,8 +43,14 @@ fun MainScreen(
             ConversationDrawer(
                 conversations = uiState.conversations,
                 currentConversationId = uiState.currentConversationId,
-                onConversationClick = { viewModel.switchConversation(it) },
-                onNewConversation = { viewModel.createNewConversation() },
+                onConversationClick = { id, title->
+                    viewModel.switchConversation(id, title)
+                    scope.launch { drawerState.close() }
+                },
+                onNewConversation = {
+                    viewModel.createNewConversation()
+                    scope.launch { drawerState.close() }
+                },
                 onDeleteConversation = { viewModel.deleteConversation(it) }
             )
         }
@@ -78,7 +85,14 @@ fun MainScreen(
                         )
                     }
                 },
-                title = { Text("AutoGLM Android", style = TextStyle(fontSize = 18.sp)) }
+                title = {
+                    Text(
+                        uiState.currentConversationTitle ?: "AutoGLM Android",
+                        style = TextStyle(fontSize = 18.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             )
             ChatScreen(viewModel = viewModel)
         }
